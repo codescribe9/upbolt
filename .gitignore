@@ -1,3 +1,6 @@
+data/
+es5/
+
 # Logs
 logs
 *.log

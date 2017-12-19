@@ -1,0 +1,26 @@
+{
+  "name": "upbolt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "gulp dev",
+    "up": "npm run dev && node es5/upbolt"
+  },
+  "author": "SAM",
+  "license": "GPL",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^7.0.0"
+  },
+  "dependencies": {
+    "FormData": "^0.10.1",
+    "axios": "^0.17.1",
+    "form-data": "^2.3.1",
+    "split-file": "^2.1.0",
+    "uuid": "^3.1.0"
+  }
+}
