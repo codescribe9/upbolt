@@ -3,52 +3,86 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios'
 import FormData from 'form-data'
+import uuidv1 from 'uuid/v4'
+import del from 'del'
 
 export class CustomFile {
 
-	constructor(fp, url){
-		this.filePath = fp;
-		this.url = url;
+	constructor(fp, url, chunkSize = 1048576){
+
+		if (typeof fp !== 'string') {
+			throw new TypeError(`Expected a string for fp, got ${typeof fp}`);
+		}
+
+		if (typeof url !== 'string') {
+			throw new TypeError(`Expected a string for url, got ${typeof url}`);
+		}
+
+
+
+		let dirPath = path.dirname(fp);
+		let fileExtn = path.extname(fp);
+		let fileName = path.basename(fp);
+		let fileNameSansExtn = path.basename(fp, fileExtn);
+
+		this.fileInfo = {filePath: fp, dirPath: dirPath, fileName: fileName, fileExtn: fileExtn, fileNameSansExtn: fileNameSansExtn };
+		this.serverUrl = url;
+		this.chunkSize = chunkSize; //1048576
+		console.log(this.fileInfo);
 	}
 
-	triggerFileMerge(guid){
-		return axios.post(this.url + 'merge', {fileName: path.basename(this.filePath), guid: guid})
+	triggerFileMerge(){
+		let splitFilesFolderPath = path.dirname(this.guidFilePath);		
+		del([splitFilesFolderPath]).then(paths => {
+			console.log('Deleted temp files and folders:\n', paths.join('\n'));
+		});
+
+		return axios.post(this.serverUrl + 'merge', {fileName: this.fileInfo.fileName, guid: this.guid});
 	}
 
-	splitFile(newFilePath){
-		this.newFilePath = newFilePath;
-		return FileHandler.splitFileBySize(this.newFilePath, 1048576);				
-	}
-
-	renameFile(newName){			
-
+	setupFile(){	
+		this.guid = uuidv1();
+	
+		let dirPath = this.fileInfo.dirPath + '/' + this.guid;  	
+  		if(!fs.existsSync(dirPath))
+			  fs.mkdirSync(dirPath);
 		
-		return new Promise((resolve, reject) => {
-			let fileExtn = path.extname(this.filePath);
-			let fileName = path.basename(this.filePath, fileExtn);
-			//let newPath =  path.join(path.dirname(this.filePath), newName + fileExtn);
-			let newPath =  path.dirname(this.filePath) + '/' + newName + fileExtn;
+		this.guidFilePath =  path.join(dirPath, this.guid + this.fileInfo.fileExtn);
+		console.log('guidFilePath', this.guidFilePath);
+			  
+		return this.copyFile();
 
-			fs.rename(this.filePath, newPath, (err) => {
+	}
+
+	copyFile() {		
+		return new Promise((resolve, reject) => {
+			
+			fs.copyFileSync(this.fileInfo.filePath, this.guidFilePath, (err) => {
 			    if ( err ) {
 			    	console.log('ERROR: ' + err);
-			    	reject(err);
+			    	return reject(err);
 			    }
-			    else {
-			    	console.log(this.filePath + " renamed to " + newPath);
-			    	resolve(newPath);
-				}
 			});
+
+			console.log(`${this.fileInfo.filePath} copied to ${this.guidFilePath}`);
+			resolve(this.guidFilePath);
 		}) 
 	}
 
+	splitFile(){		
+		console.log("Splitting files");
+		return FileHandler.splitFileBySize(this.guidFilePath, this.chunkSize);				
+	}
+
+	
+
 	uploadFiles(filePaths) {
 		
-		console.log('Uploading files count:' + filePaths.length);
-		console.log('URL: ' + this.url);
+		console.log(`Uploading files count: ${filePaths.length}`);
+		
 		return Promise.all(
 			filePaths.map((filePath) => {	
-				return this.uploadFile(this.url, filePath);
+				return this.uploadFile(this.serverUrl, filePath);
 			})
 		);
 
@@ -68,30 +102,28 @@ export class CustomFile {
 		});
 
 	}
-
+	
 	uploadFile(url, filePath, name='file') {
-		if (typeof url !== 'string') {
-			throw new TypeError(`Expected a string, got ${typeof url}`);
-		}
-		console.log('Uploading file: ' + filePath);
+		console.log(`Uploading file: ${filePath}` );
 
 		this.readFile(filePath)
 		.then((data) => {
 			const formData = new FormData();
-			let fileName = path.basename(filePath);
-			console.log('fileName: ' + fileName);
-	    	formData.append(name, data, fileName)
+			
+			let fileName = path.basename(filePath);	    	
+	    	formData.append(name, data, fileName);
 	    	const config = {
 		        headers: {
 		            'content-type': `multipart/form-data; boundary=${formData._boundary}`
 
 		        }
 		    }
-
-		    //console.log(formData, config);
+		    
 		    return  axios.post(url + 'up', formData, config)
 		})	    
 	}
+
+
 
 
 }
