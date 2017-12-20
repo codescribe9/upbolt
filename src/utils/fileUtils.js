@@ -39,11 +39,11 @@ export class CustomFile {
 			console.log('Deleted temp files and folders:\n', paths.join('\n'));
 		});
 
-		return axios.post(this.serverUrl + 'merge', {fileName: this.fileInfo.fileName, guid: this.guid});
+		return axios.post(this.serverUrl + 'merge', {fileName: this.fileInfo.fileName, guid: this.guid, startTime: this.startTime});
 	}
 
 	setupFile(){	
-		
+		this.startTime = new Date();
 
 		this.guid = uuidv1();
 	
@@ -83,9 +83,11 @@ export class CustomFile {
 	uploadFiles(filePaths) {
 		
 		console.log(`Uploading files count: ${filePaths.length}`);
-		
+		var i=1;
 		return Promise.all(
 			filePaths.map((filePath) => {	
+				process.stdout.write(`${i}/${filePaths.length} ${i == filePaths.length ? '\n' : ''}`);
+				i++;	
 				return this.uploadFile(this.serverUrl, filePath);
 			})
 		);
@@ -108,7 +110,7 @@ export class CustomFile {
 	}
 	
 	uploadFile(url, filePath, name='file') {
-		console.log(`Uploading file: ${filePath}` );
+		//console.log(`Uploading file: ${filePath}` );
 
 		this.readFile(filePath)
 		.then((data) => {
