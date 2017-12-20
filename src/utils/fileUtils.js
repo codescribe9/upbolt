@@ -18,7 +18,9 @@ export class CustomFile {
 			throw new TypeError(`Expected a string for url, got ${typeof url}`);
 		}
 
-
+		if(!fs.existsSync(fp)){
+			throw new Error(`Invalid input, no file found at ${fp}`);
+		}
 
 		let dirPath = path.dirname(fp);
 		let fileExtn = path.extname(fp);
@@ -41,6 +43,8 @@ export class CustomFile {
 	}
 
 	setupFile(){	
+		
+
 		this.guid = uuidv1();
 	
 		let dirPath = this.fileInfo.dirPath + '/' + this.guid;  	
